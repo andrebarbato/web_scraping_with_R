@@ -6,12 +6,6 @@ library(rvest)
 library(yfR)
 library(tidyverse)
 
-# get IBOVESPA tickers
-
-index_composition <- yfR::yf_index_composition('IBOV')
-
-ibov_tickers <- index_composition$ticker
-
 # setting the url and xpath
 
 my_url <- 'https://www.fundamentus.com.br/resultado.php'
@@ -20,26 +14,34 @@ my_path <- '//*[@id="resultado"]'
 out_nodes <- html_nodes(read_html(my_url),
                         xpath = my_path)
 
-df_ibov_fund <- html_table(out_nodes)
+df_fund <- html_table(out_nodes)
 
-df_ibov_fund <- df_ibov_fund[[1]]
+df_fund <- df_fund[[1]]
 
-glimpse(df_ibov_fund)
+glimpse(df_fund)
 
-names(df_ibov_fund) <- c("ticker", "Cotacao", "P_L", "P_VP", "PSR", "Div.Yield",
-                         "P_Ativo", "P_Cap.Giro", "P_EBIT", "P_Ativ Circ.Liq", "EV_EBIT", 
-                         "EV_EBITDA" , "Mrg Ebit", "Mrg. Liq.", "Liq. Corr.",  "ROIC", "ROE",
-                         "Liq.2meses", "Patrim. Liq", "Div.Brut_Patrim.","Cresc. Rec.5a")
+names(df_fund) <- c("ticker", "Cotacao", "P_L", "P_VP", "PSR", "Div.Yield",
+                    "P_Ativo", "P_Cap.Giro", "P_EBIT", "P_AtivCirc.Liq", "EV_EBIT", 
+                    "EV_EBITDA" , "MrgEbit", "Mrg.Liq.", "Liq.Corr.", "ROIC", "ROE",
+                    "Liq.2meses", "Patrim.Liq", "Div.Brut_Patrim.","Cresc.Rec.5a")
 
-n <- dim(df_ibov_fund)[2]
+n <- 2:dim(df_fund)[2]
 
-df_ibov_fund_original <- df_ibov_fund
-df_ibov_fund_original -> df_ibov_fund
+for(i in n){
+  df_fund[i] <- lapply(X = df_fund[i], FUN = str_replace_all, pattern = fixed('.'), 
+                       replacement = '') 
+  df_fund[i] <- lapply(X = df_fund[i], FUN = str_replace_all, pattern = fixed(','), 
+                       replacement = '.')
+  df_fund[i] <- lapply(X = df_fund[i], FUN = str_replace_all, pattern = fixed('%'), 
+                       replacement = '') 
+  df_fund[i] <- lapply(X = df_fund[i], FUN = as.numeric)
+  
+  }
 
+# get IBOVESPA tickers
 
-df_ibov_fund$Cotacao <- sapply(X = df_ibov_fund$Cotacao, 
-                               FUN = str_replace_all, pattern = '.',
-                               replacement = '')
+index_composition <- yfR::yf_index_composition('IBOV')
 
-df_ibov_fund <- as.numeric(sub(x = df_ibov_fund$Cotacao,pattern = ',', 
-                            replacement = '.'))
+ibov_tickers <- index_composition$ticker
+
+df_ibov_fund <- df_fund %>% filter(ticker %in% ibov_tickers)
